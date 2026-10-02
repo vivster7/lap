@@ -336,3 +336,27 @@ The core language is Go and the pi reference is confirmed. The starter's partial
 Windows/ConPTY, automatic orphan recovery or a separate supervisor process, fairness between runs, optional staged writers, finer preparation dependencies, and result caching should follow evidence from the prototype. The shared resource pool itself is in v0.
 
 The next implementation milestone is to test the proposed contracts together: PTY behavior, process and lease lifetime, durable output, and cancellation within the budget. Passing a synthetic probe is not evidence that arbitrary tools or detached servers satisfy those contracts.
+
+## Spike findings (2026-10-01)
+
+Measured on Linux (Go 1.27.1); darwin compiles but is unrun. Details and numbers: [proc/SPIKE.md](../proc/SPIKE.md), [term/SPIKE.md](../term/SPIKE.md). These supersede conflicting statements above.
+
+Process supervision (`proc`):
+- `Setsid` + `Setpgid` together is invalid: start fails with EPERM. `Setsid` alone gives pgid == sid == pid. PTY mode owns the *session*; pipe mode owns the *process group*.
+- `exec.Cmd` is not used: default cancellation and the `WaitDelay` fallback both kill only the direct child, it cannot observe exit without reaping, and it resolves argv[0] against the supervisor's PATH. `proc` uses `syscall.ForkExec` + pidfd.
+- Observe exit without reaping; reap only after cleanup is verified. The zombie pins the pid so group signals can never hit a recycled ID; single-pid signals re-check start time via pidfd.
+- A grandchild that calls `setsid` escapes group and session scans. It is found while its parent lives (ancestry) or while it holds the task's stdio (fd scan, which requires per-task output fds from `term`). Orphaned with stdio closed, it is undetectable — a known gap; child-subreaper is an option, not built.
+- PTY sessions receive kernel SIGHUP when the session leader exits or the master closes. TERM-resistance tests in PTY mode must also ignore HUP. The "runner killed" acceptance case must be tested per capture mode.
+- Leases: release by `close()` after verified cleanup, never `LOCK_UN`; token fds are close-on-exec; capacity is never reported free when verification failed.
+- `Pdeathsig` reaches only the direct child and fires when the starting OS thread exits.
+- `ru_maxrss` is KiB on Linux, bytes on darwin.
+- Cleanup latency: TERM→verified ≈12 ms, KILL→verified ≈7 ms.
+
+Terminal capture (`term`):
+- creack/pty v1.1.24 returns a *blocking* master (its `Fd()` calls switch the fd to blocking), so read deadlines and Close cannot unblock reads. `term` re-wraps the master non-blocking on Linux; macOS remains blocking (open issue).
+- Linux EIO after child exit is treated as EOF only for PTYs; 2000 write-then-exit runs lost 0 bytes. EIO arrives only after *every* slave copy is closed, including the parent's — closing child ends after start is part of the launch contract.
+- Leftover descendants: in PTY mode an ordinary `cmd &` is hung up when the child exits; only HUP-ignoring processes keep output open. In pipe mode any background job keeps it open. Launcher sequence: child exits → short tail grace on `Drained()` → terminate group/session → `Done(cleanup ctx)` (implemented in `run`).
+- Terminal queries: a child awaiting a cursor-position reply hangs forever without one. `term` answers from a live emulator by default (bounded queue, 1 s timeout), journaling replies as `input` events. Line discipline keeps cooked kernel defaults; raw bytes (with CRLF) are stored as received.
+- Emulator: `github.com/charmbracelet/x/vt` (pinned pseudo-version), chosen over vt10x and go-headless-term for wide/emoji correctness and query replies. Its gaps — split combining marks, an unbuffered reply pipe, in-memory scrollback erased by `clear`, ~3–6 MB/s rendering — are worked around in `term`. The rendered view is therefore lazy and tail-limited; the plain projection is the scalable view.
+- Throughput with bounded RSS (19–32 MB at any output size): PTY 156–183 MB/s, pipes 1.2–2 GB/s. A slow display does not slow draining. A disk failing after 100 KB still drains, records the exact missing range, and marks the capture incomplete.
+- Each capture directory holds `output.bytes`, `events.jsonl`, `capture.json`, and cached derived views.
