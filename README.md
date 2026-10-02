@@ -10,7 +10,7 @@ parts well (process supervision, PTY capture, scheduling, run history), and a
 company-owned `main` program that composes it. Tools are installed by
 [mise](https://mise.jdx.dev).
 
-Status: pre-v0 spikes. See [docs/design.md](docs/design.md).
+Status: pre-v0. `proc`, `term` and `run` are spiked and tested on Linux (darwin compiles, untested). See [docs/design.md](docs/design.md) and each package's SPIKE.md.
 
 ## Layout
 
@@ -18,6 +18,7 @@ Status: pre-v0 spikes. See [docs/design.md](docs/design.md).
 |---|---|
 | `proc`  | process supervision: owned groups/sessions, cancellation, cleanup verification |
 | `term`  | output capture: PTY/pipe sessions, raw byte journal, rendered + plain views |
+| `run`   | one supervised execution: proc + term composed (launch → deadline → verified cleanup → drain) |
 | `sched` | (planned) admission, deadline, cross-worktree resource pool |
 | `store` | (planned) run records, timing history, capture artifacts |
 | `rules` | (planned) finding → remediation |
