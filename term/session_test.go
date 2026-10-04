@@ -166,6 +166,7 @@ func TestPTYGrandchild(t *testing.T) {
 		t.Logf("drained in %v; background job was hung up (no 'late')", el.Round(time.Millisecond))
 	})
 	t.Run("HUP-ignoring grandchild keeps the slave open; Done waits for it", func(t *testing.T) {
+		skipOnDarwinLeaderExit(t)
 		start := time.Now()
 		sum, err, c := run(t, Spec{Mode: PTY}, 5*time.Second, "sh", "-c", `trap '' HUP; (sleep 1; echo late) & echo early`)
 		el := time.Since(start)
@@ -176,6 +177,7 @@ func TestPTYGrandchild(t *testing.T) {
 		t.Logf("drained in %v including the grandchild's late write", el.Round(time.Millisecond))
 	})
 	t.Run("grandchild outlives the drain deadline", func(t *testing.T) {
+		skipOnDarwinLeaderExit(t)
 		s := openTest(t, Spec{Mode: PTY})
 		cmd := launch(t, s, "sh", "-c", `trap '' HUP; sleep 30 & echo early`)
 		cmd.Wait()
@@ -203,6 +205,7 @@ func TestPTYGrandchild(t *testing.T) {
 		t.Logf("Done returned after %v: %v", el.Round(time.Millisecond), err)
 	})
 	t.Run("recommended: tail grace, kill the group, then Done", func(t *testing.T) {
+		skipOnDarwinLeaderExit(t)
 		s := openTest(t, Spec{Mode: PTY})
 		cmd := launch(t, s, "sh", "-c", `trap '' HUP; sleep 30 & echo early`)
 		cmd.Wait()
@@ -386,6 +389,9 @@ func TestCrashLeftovers(t *testing.T) {
 // succeeds but has no effect: Read sits in a blocking read(2), so a reader
 // cannot be interrupted at the drain deadline.
 func TestCreackMasterIsBlocking(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("the non-blocking re-wrap is Linux-only; macOS masters stay blocking (open issue)")
+	}
 	check := func(m *os.File) (returned bool) {
 		m.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 		done := make(chan error, 1)
@@ -431,4 +437,15 @@ func ptyEnded(end string) bool {
 		return end == EndHangup || end == EndEOF
 	}
 	return end == EndHangup
+}
+
+// skipOnDarwinLeaderExit skips tests of descendants that outlive the session
+// leader: on macOS the master reports EOF as soon as the leader exits, even
+// while a descendant still holds the slave, so such output is not captured
+// there (documented open issue).
+func skipOnDarwinLeaderExit(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "darwin" {
+		t.Skip("macOS: master EOF at session-leader exit (open issue)")
+	}
 }

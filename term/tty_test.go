@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -44,6 +45,9 @@ func TestTTYDetection(t *testing.T) {
 			ptyErr, map[Mode]string{PTY: "\x1b[", Pipes: "", StdoutPipeStderrPTY: "\x1b["}},
 	}
 	for _, p := range probes {
+		if strings.HasPrefix(p.name, "ls ") && runtime.GOOS != "linux" {
+			continue // GNU ls color codes; BSD ls differs
+		}
 		if strings.HasPrefix(p.name, "python traceback") && !pythonAtLeast(3, 13) {
 			continue // colored tracebacks arrived in Python 3.13
 		}

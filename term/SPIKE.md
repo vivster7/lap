@@ -256,3 +256,17 @@ output.bytes: no space left on device"}]}`, `capture.json` says incomplete and `
    `rendered.ansi`, `views.json`; query replies written to the child are part of the journal (`input`).
 6. "Disabling echo": term keeps the kernel's cooked defaults (including ECHO); the only bytes ever written
    to a child terminal are query replies.
+
+
+## macOS results from CI (2026-10-04)
+
+The first macOS CI runs (GitHub `macos-latest`, arm64) showed:
+
+- A PTY stream ends with EOF, not EIO, once the slave side is closed; every
+  byte was still captured (the 2000-run tail test passes with EOF accepted).
+- The master reports EOF as soon as the session leader exits, even while a
+  SIGHUP-ignoring descendant holds the slave, so that descendant's later
+  output is not captured. Tests for that Linux behavior skip on darwin.
+- The non-blocking re-wrap is Linux-only: on macOS read deadlines on the
+  master are ignored, so the Linux evidence tests that depend on them skip.
+- BSD `ls` color output differs from GNU's; that TTY probe runs on Linux only.

@@ -179,9 +179,13 @@ processes.
 
 ## Status and limits
 
-Pre-1.0. Linux is tested; macOS compiles and runs in CI, but PTY hangup and
-non-blocking master behavior there are less proven. Known limits, by design
-or not yet done (see [docs/design.md](docs/design.md)):
+Pre-1.0. Linux and macOS run the test suite in CI. Known limits, by design or
+not yet done (see [docs/design.md](docs/design.md)):
+
+- macOS PTYs differ from Linux: the master stays blocking (drain deadlines are
+  best effort) and reports EOF as soon as the session leader exits, so output
+  from descendants that outlive it (e.g. a SIGHUP-ignoring background job) is
+  not captured there. Process cleanup is unaffected.
 
 - If the lap process itself is SIGKILLed, its tasks' tokens are released while
   orphaned tasks may still run; recovery is documented, not automatic.
