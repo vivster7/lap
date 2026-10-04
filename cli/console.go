@@ -56,8 +56,8 @@ func (c *console) Report(e lap.Event) {
 		for _, en := range pl.Entries {
 			counts[en.Status]++
 		}
-		fmt.Fprintf(c.w, "%s %s · budget %s · %s mode · %d cpu · %s\n", p.bold(c.cfg.Name), p.dim("·"),
-			pl.Budget, pl.Mode, pl.CPU, pl.ScopeDesc)
+		fmt.Fprintf(c.w, "%s %s\n", p.bold(c.cfg.Name), p.dim(fmt.Sprintf("· budget %s · %s mode · %d cpu · %s",
+			pl.Budget, pl.Mode, pl.CPU, pl.ScopeDesc)))
 		if c.verbose {
 			printPlan(c.w, pl, p)
 		} else {
@@ -68,11 +68,11 @@ func (c *console) Report(e lap.Event) {
 		fmt.Fprintf(c.w, "  %s %s\n", p.yellow("!"), e.Text)
 	case lap.TaskStarted:
 		a := e.Attempt
-		scope := fmt.Sprintf("%d files", a.ScopeFiles)
-		if a.ScopeAll {
-			scope = "all files"
+		info := a.Variant
+		if !a.ScopeAll && a.ScopeFiles > 0 {
+			info += fmt.Sprintf(" · %s", plural(a.ScopeFiles, "file"))
 		}
-		fmt.Fprintf(c.w, "  %s %s %s\n", p.dim("▸"), a.Task, p.dim(fmt.Sprintf("[%s · %s · %d cpu]", a.Variant, scope, a.Workers)))
+		fmt.Fprintf(c.w, "  %s %s %s\n", p.dim("▸"), a.Task, p.dim(fmt.Sprintf("[%s · %d cpu]", info, a.Workers)))
 	case lap.TaskFinished:
 		c.finished(e)
 	case lap.RunFinished:

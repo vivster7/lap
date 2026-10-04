@@ -290,3 +290,26 @@ func TestWorktreeLockAndPool(t *testing.T) {
 		t.Errorf("tasks overlapped with a 1-cpu pool")
 	}
 }
+
+func TestRetryAfterRepeatedTimeoutDeferrals(t *testing.T) {
+	repo := testRepo(t, map[string]string{"a.txt": "x\n"})
+	marker := filepath.Join(t.TempDir(), "warm")
+	// Slow until the marker exists (a cold cache), then fast.
+	task := Task{Name: "build", Phase: Check, Variants: []Variant{{Name: "all",
+		Cmd: Shell("if [ -f " + marker + " ]; then exit 0; fi; sleep 30")}}}
+	cfg := testConfig(task)
+	opt := RunOptions{Root: repo, Budget: 2 * time.Second}
+
+	if a := byTask(mustRun(t, cfg, opt))["build"]; a.Outcome != store.TimedOut {
+		t.Fatalf("first run: %v", a.Outcome)
+	}
+	os.WriteFile(marker, nil, 0o644)
+	for i := 0; i < retryAfterDeferrals; i++ {
+		if a := byTask(mustRun(t, cfg, opt))["build"]; a.Outcome != store.Deferred {
+			t.Fatalf("run %d: %v %q", i+2, a.Outcome, a.Reason)
+		}
+	}
+	if a := byTask(mustRun(t, cfg, opt))["build"]; a.Outcome != store.Passed {
+		t.Fatalf("after %d deferrals the variant should be retried: %v %q", retryAfterDeferrals, a.Outcome, a.Reason)
+	}
+}

@@ -580,7 +580,13 @@ func (e *engine) options(n *node) []Option {
 		est := e.store.Estimate(store.EstimateQuery{
 			Task: n.task.Name, Variant: v.name(), ScopeBucket: bucket, Machine: e.host, Workers: max,
 		})
-		if est.Duration == 0 && v.Estimate > 0 {
+		if est.Samples == 0 && est.LowerBound > 0 && e.deferredStreak(n.task.Name, v.name()) >= retryAfterDeferrals {
+			// Only a timeout is known, and it has kept this variant out of
+			// the last runs. Caches may have warmed since: try again rather
+			// than defer forever on one censored sample.
+			est = store.Estimate{Confidence: "none", Source: fmt.Sprintf("retrying: last timeout %s is old evidence", est.LowerBound.Round(time.Second))}
+		}
+		if est.Duration == 0 && v.Estimate > 0 && est.LowerBound == 0 {
 			est = store.Estimate{Duration: v.Estimate, Confidence: "config", Source: "configured"}
 		}
 		mem := v.memory()
@@ -1088,4 +1094,26 @@ func phaseLabel(n *node) string {
 		return n.label
 	}
 	return n.phase.String()
+}
+
+// retryAfterDeferrals is how many consecutive deferrals based only on a
+// timeout make the engine try a variant again.
+const retryAfterDeferrals = 3
+
+// deferredStreak counts the most recent consecutive attempts of task that
+// were deferred while their broadest variant was variant.
+func (e *engine) deferredStreak(task, variant string) int {
+	hist, err := e.store.History(store.Query{Task: task, Worktree: e.root, Limit: 10})
+	if err != nil {
+		return 0
+	}
+	n := 0
+	for i := len(hist) - 1; i >= 0; i-- {
+		a := hist[i]
+		if a.Outcome != store.Deferred || !strings.HasPrefix(a.Reason, variant+" needs") {
+			break
+		}
+		n++
+	}
+	return n
 }

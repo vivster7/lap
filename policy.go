@@ -113,6 +113,13 @@ func (p DefaultPolicy) Decide(_ context.Context, s Snapshot) Decision {
 
 	var d Decision
 	freeCPU, freeMem := s.FreeCPU, s.FreeMem
+	// Tasks that can use many cores get a fair share of what is free, so one
+	// AllCPU task does not starve the others: free / (ready tasks), at least
+	// the task's minimum.
+	share := freeCPU
+	if len(ready) > 1 {
+		share = (freeCPU + len(ready) - 1) / len(ready)
+	}
 	unknown := s.RunningUnknown
 	for _, c := range ready {
 		fitsTime := false
@@ -137,6 +144,12 @@ func (p DefaultPolicy) Decide(_ context.Context, s Snapshot) Decision {
 				continue
 			}
 			cpu := o.MaxCPU
+			if cpu > share && share >= o.MinCPU {
+				cpu = share
+			}
+			if cpu < o.MinCPU {
+				cpu = o.MinCPU
+			}
 			if cpu > freeCPU {
 				cpu = freeCPU
 			}
