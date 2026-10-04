@@ -3,6 +3,7 @@ module github.com/vivster7/lap
 go 1.27.1
 
 require (
+	github.com/bmatcuk/doublestar/v4 v4.10.2
 	github.com/charmbracelet/x/vt v0.0.0-20261001101533-953920dd3285
 	github.com/creack/pty v1.1.24
 	golang.org/x/sys v0.41.0
