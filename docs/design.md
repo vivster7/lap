@@ -1,6 +1,6 @@
 # lap design (v0)
 
-Source: reviewed design from the Claude/Codex design rounds (2026-10-01). Partial-run exit policy decided by user: **exit 0, show partial coverage** (may be flagged later).
+Design produced in AI-assisted review rounds (Claude and Codex), 2026-10-01, before implementation; the "Spike findings" section at the end records what the spikes measured. Partial-run exit policy: **exit 0, show partial coverage** (a stricter opt-in flag may come later).
 
 Build a small framework for composing a company's own local verification command. Its job is to run useful formatting, generation, linting, typechecking, and tests within a configurable time budget while keeping the laptop usable. Scheduling is the central feature.
 
@@ -198,7 +198,7 @@ Detached workers and pre-existing shared servers need a tested adapter or an exp
 
 Mise's task timeout is not sufficient evidence of this property. In the installed Linux mise 2026.9.14, a disposable probe returned at 2.018 seconds for a two-second timeout. At 3.518 seconds a normal Python grandchild was still alive and had written a marker after the deadline; the parent had exited. The test used no daemonization or ignored signals, and test-owned processes were cleaned up. This is an observation of one version and environment, not a claim about all versions or platforms.
 
-The mise probe and its observed result are saved under /home/vivster7/Work/tries/preflight-design-evidence/. A second disposable Linux probe, lease_probe.py, killed a runner holding a flock: another process immediately acquired the token while the previous child remained alive. Test processes were cleaned up. This demonstrates the limitation of runner-held locks; it does not validate the proposed supervisor.
+The mise probe and its observed result were saved locally by the design reviewers (not in this repository). A second disposable Linux probe, lease_probe.py, killed a runner holding a flock: another process immediately acquired the token while the previous child remained alive. Test processes were cleaned up. This demonstrates the limitation of runner-held locks; it does not validate the proposed supervisor.
 
 ## Terminal capture and replay
 
