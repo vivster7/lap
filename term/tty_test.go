@@ -4,7 +4,9 @@ package term
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -42,6 +44,9 @@ func TestTTYDetection(t *testing.T) {
 			ptyErr, map[Mode]string{PTY: "\x1b[", Pipes: "", StdoutPipeStderrPTY: "\x1b["}},
 	}
 	for _, p := range probes {
+		if strings.HasPrefix(p.name, "python traceback") && !pythonAtLeast(3, 13) {
+			continue // colored tracebacks arrived in Python 3.13
+		}
 		for _, m := range []Mode{PTY, Pipes, StdoutPipeStderrPTY} {
 			_, err, c := run(t, Spec{Mode: m}, 5*time.Second, p.argv...)
 			if err != nil {
@@ -166,4 +171,16 @@ func TestResize(t *testing.T) {
 	if info.Cols != 100 || info.Rows != 30 || info.Resizes != 1 {
 		t.Fatalf("render info %+v", info)
 	}
+}
+
+func pythonAtLeast(major, minor int) bool {
+	out, err := exec.Command("python3", "-c", "import sys; print(sys.version_info[0], sys.version_info[1])").Output()
+	if err != nil {
+		return false
+	}
+	var a, b int
+	if _, err := fmt.Sscan(string(out), &a, &b); err != nil {
+		return false
+	}
+	return a > major || (a == major && b >= minor)
 }

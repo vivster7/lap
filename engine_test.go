@@ -183,7 +183,8 @@ func TestWriterFixesBeforeChecks(t *testing.T) {
 			if inv.Mode == CheckOnly {
 				return append([]string{"sh", "-c", `! grep -l UGLY "$@"`, "sh"}, inv.Files...), nil
 			}
-			return append([]string{"sed", "-i", "s/UGLY/pretty/"}, inv.Files...), nil
+			// Portable in-place edit (BSD sed's -i differs from GNU's).
+			return append([]string{"sh", "-c", `for f; do sed s/UGLY/pretty/ "$f" > "$f.tmp" && mv "$f.tmp" "$f"; done`, "sh"}, inv.Files...), nil
 		},
 	}}}
 	check := shTask("lint", Check, "! grep -q UGLY b.py")
@@ -300,7 +301,9 @@ func TestRetryAfterRepeatedTimeoutDeferrals(t *testing.T) {
 	cfg := testConfig(task)
 	opt := RunOptions{Root: repo, Budget: 2 * time.Second}
 
-	if a := byTask(mustRun(t, cfg, opt))["build"]; a.Outcome != store.TimedOut {
+	// A longer first budget makes the recorded timeout (a lower bound of
+	// ~2.5s) clearly exceed what later 2s runs have left.
+	if a := byTask(mustRun(t, cfg, RunOptions{Root: repo, Budget: 3 * time.Second}))["build"]; a.Outcome != store.TimedOut {
 		t.Fatalf("first run: %v", a.Outcome)
 	}
 	os.WriteFile(marker, nil, 0o644)

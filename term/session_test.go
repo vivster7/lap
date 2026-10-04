@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -30,7 +31,7 @@ func TestLineEndingsPreserved(t *testing.T) {
 	if got := string(rawOf(t, c)); got != "a\r\nb\r\n" {
 		t.Fatalf("pty raw = %q, want ONLCR CRLF", got)
 	}
-	if sum.Streams[0].End != EndHangup {
+	if !ptyEnded(sum.Streams[0].End) {
 		t.Fatalf("pty end = %q, want hangup", sum.Streams[0].End)
 	}
 	if got := plainOf(t, c, PlainOptions{}); got != "a\nb\n" {
@@ -79,7 +80,7 @@ func TestPTYTailNeverLost(t *testing.T) {
 			sum, err, c := run(t, Spec{Mode: PTY}, 10*time.Second, "python3", "-c", script)
 			got := rawOf(t, c)
 			want := strings.Repeat("x", size) + "END"
-			if err != nil || string(got) != want || sum.Streams[0].End != EndHangup || !sum.Complete {
+			if err != nil || string(got) != want || !ptyEnded(sum.Streams[0].End) || !sum.Complete {
 				mu.Lock()
 				failures++
 				mu.Unlock()
@@ -415,4 +416,14 @@ func TestCreackMasterIsBlocking(t *testing.T) {
 		t.Fatal("pollable master ignored the read deadline")
 	}
 	t.Log("creack/pty master: deadline ignored (blocking read); after pollableMaster: deadline honoured")
+}
+
+// ptyEnded reports whether a PTY stream ended normally for this platform:
+// Linux reports EIO (hangup) once every slave copy is closed; macOS returns a
+// plain EOF.
+func ptyEnded(end string) bool {
+	if runtime.GOOS == "darwin" {
+		return end == EndHangup || end == EndEOF
+	}
+	return end == EndHangup
 }
