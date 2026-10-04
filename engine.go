@@ -1083,7 +1083,6 @@ func gitOutput(dir string, args ...string) (string, error) {
 	return strings.TrimSpace(string(out)), err
 }
 
-
 func phaseLabel(n *node) string {
 	if n.label != "" {
 		return n.label

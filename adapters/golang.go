@@ -69,8 +69,8 @@ func GoVet() lap.Task {
 		Variants: []lap.Variant{
 			{
 				Name: "all", Coverage: "every package",
-				Cmd:  lap.Cmd("go", "vet", "./..."),
-				CPU:  lap.AllCPU, MinCPU: 2, Memory: 2 << 30,
+				Cmd: lap.Cmd("go", "vet", "./..."),
+				CPU: lap.AllCPU, MinCPU: 2, Memory: 2 << 30,
 			},
 			{
 				Name: "changed", Coverage: "packages with changed files",

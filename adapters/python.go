@@ -154,8 +154,10 @@ func Mypy(args ...string) lap.Task {
 		Name: "mypy", Groups: []string{"typecheck"}, Phase: lap.Check,
 		Files: pyFiles, Config: append([]string{"mypy.ini", ".mypy.ini"}, pyConfig...),
 		Variants: []lap.Variant{{
-			Name:     "default",
-			Cmd:      func(inv lap.Invocation) ([]string, error) { return append([]string{bin(inv.Root, "mypy")}, args...), nil },
+			Name: "default",
+			Cmd: func(inv lap.Invocation) ([]string, error) {
+				return append([]string{bin(inv.Root, "mypy")}, args...), nil
+			},
 			Memory:   2 << 30,
 			Estimate: 30 * time.Second,
 		}},

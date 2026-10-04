@@ -128,8 +128,10 @@ func TSC(args ...string) lap.Task {
 		Files:  []string{"*.ts", "*.tsx", "*.mts", "*.cts"},
 		Config: []string{"tsconfig*.json", "package.json"},
 		Variants: []lap.Variant{{
-			Name:     "default",
-			Cmd:      func(inv lap.Invocation) ([]string, error) { return append([]string{bin(inv.Root, "tsc"), "--pretty", "false"}, args...), nil },
+			Name: "default",
+			Cmd: func(inv lap.Invocation) ([]string, error) {
+				return append([]string{bin(inv.Root, "tsc"), "--pretty", "false"}, args...), nil
+			},
 			Memory:   3 << 30,
 			Estimate: 30 * time.Second,
 		}},
