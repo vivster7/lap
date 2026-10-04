@@ -360,3 +360,16 @@ Terminal capture (`term`):
 - Emulator: `github.com/charmbracelet/x/vt` (pinned pseudo-version), chosen over vt10x and go-headless-term for wide/emoji correctness and query replies. Its gaps — split combining marks, an unbuffered reply pipe, in-memory scrollback erased by `clear`, ~3–6 MB/s rendering — are worked around in `term`. The rendered view is therefore lazy and tail-limited; the plain projection is the scalable view.
 - Throughput with bounded RSS (19–32 MB at any output size): PTY 156–183 MB/s, pipes 1.2–2 GB/s. A slow display does not slow draining. A disk failing after 100 KB still drains, records the exact missing range, and marks the capture incomplete.
 - Each capture directory holds `output.bytes`, `events.jsonl`, `capture.json`, and cached derived views.
+
+## Implementation status (2026-10-04)
+
+Implemented: `proc`, `term`, `run`, `pool` (machine-wide flock tokens), `scope`, `store` (history, estimates, retention), the root engine (applicability, writer ordering, prepare barrier, replaceable `Policy`, variant narrowing, plan simulation, freshness checks, one remediation pass for `Rule`s), the starter `cli`, `adapters`, and examples for Prometheus, Django and Vite, measured on real changes.
+
+Decisions made during implementation:
+- The default policy gives tasks that can use many cores a fair share of the free slots (free / ready tasks), so one `AllCPU` task does not starve the rest.
+- A completed attempt supersedes older timeouts for estimation. A variant deferred three runs in a row on the strength of a timeout alone is retried, so a cold-cache timeout cannot defer it forever.
+- At the cutoff, pending tasks whose prerequisites did not finish are reported `blocked`, not `deferred`.
+- Writers are attributed changes by hashing the git-dirty file set before and after they run (cost scales with the change, not the repository).
+- Tasks run under `nice -n 10` by default.
+
+Not yet implemented: automatic orphan recovery after a SIGKILLed runner, finer-grained dependencies around unfinished preparation, staged writers, a result cache, Windows.

@@ -138,7 +138,22 @@ func (s *Store) Estimate(q EstimateQuery) Estimate {
 		est.Confidence = "low"
 		est.Source = fmt.Sprintf("max of %d sample(s) (x%.2f)", len(durs), estimateLowScale)
 	}
-	if c := newest(chosen.censored, estimateWindow); len(c) > 0 {
+	// A completed attempt supersedes older timeouts: caches warm up and code
+	// changes, so only timeouts newer than the latest completion still bound
+	// the estimate from below.
+	var latestDone time.Time
+	for _, a := range chosen.done {
+		if a.Start.After(latestDone) {
+			latestDone = a.Start
+		}
+	}
+	var recentCensored []Attempt
+	for _, a := range chosen.censored {
+		if a.Start.After(latestDone) {
+			recentCensored = append(recentCensored, a)
+		}
+	}
+	if c := newest(recentCensored, estimateWindow); len(c) > 0 {
 		est.LowerBound = slices.Max(durations(c))
 		if est.Duration < est.LowerBound {
 			est.Duration = est.LowerBound

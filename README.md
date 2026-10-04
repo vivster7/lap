@@ -8,24 +8,26 @@ not get to.
 
 ```
 $ dev
-dev · budget 1m0s · fix mode · 9 cpu · 1 changed files vs origin/main (merge-base 961c9ba409)
-plan: 3 to run, 1 deferred, 0 skipped (dev plan for details)
-  ▸ gofmt [default · 1 file · 1 cpu]
-  ✎ gofmt 0s fixed 1 file(s)
-  – go-build deferred all needs ~57s (timed out after 57.031s (lower bound)), 57s left
-  ▸ go-test [changed · 3 cpu]
-  ▸ golangci-lint [all · 3 cpu]
-  ✓ go-test 600ms narrowed: broader variant did not fit
-  ✗ golangci-lint 35.7s 1 finding
+dev · budget 1m0s · fix mode · 9 cpu · 1 changed files vs origin/main (merge-base a461af8ce4)
+plan: 4 to run, 0 deferred, 1 skipped (dev plan for details)
+  ▸ black [default · 1 file · 1 cpu]
+  ✎ black 300ms fixed 1 file(s)
+  ▸ isort [default · 1 file · 1 cpu]
+  ✎ isort 100ms fixed 1 file(s)
+  ▸ flake8 [default · 1 file · 1 cpu]
+  ▸ tests [related · 5 cpu]
+  ✗ flake8 200ms 2 findings
+  ✓ tests 28.8s narrowed: broader variant did not fit
 
-── golangci-lint (findings, exit 1) ──
-model/labels/labels_common.go:247:6: func lapDemoHelper is unused (unused)
+── flake8 (findings, exit 1) ──
+django/contrib/auth/forms.py:2:1: F401 'os' imported but unused
+django/contrib/auth/forms.py:3:1: F401 'sys' imported but unused
 
-dev in 35.8s: 1 passed, 1 fixed, 1 findings, 1 deferred
-not verified locally: go-build, go-test (narrowed to changed)
-run 20261004T053630Z-4b3fb0 · dev logs <task> · dev why
+dev in 29.4s: 1 passed, 2 fixed, 1 findings
+not verified locally: tests (narrowed to related)
+run 20261004T061926Z-29e9c6 · dev logs <task> · dev why
 ```
-*(the [Prometheus example](examples/prometheus) on a real change)*
+*(the [Django example](examples/django) on a real change: black and isort fixed the file one after the other, flake8 ran after both, and the related test app ran instead of the 20k-test suite)*
 
 Inspired by [pi](https://github.com/badlogic/pi-mono): a small core that does
 the hard parts well, and a **company-owned `main` program** that composes it.
@@ -153,7 +155,7 @@ Real `dev` commands for large open-source projects, run on real changes:
 
 | example | project | what it shows |
 |---|---|---|
-| [examples/prometheus](examples/prometheus) | Go, 1.7k files | full test suite deferred, changed packages tested; golangci-lint finds the bug |
+| [examples/prometheus](examples/prometheus) | Go, 1.7k files | full test suite narrowed to changed packages; a cold-cache timeout deferred, then retried; golangci-lint finds the bug |
 | [examples/django](examples/django) | Python, 7k files | black + isort fix the file, flake8 findings, related test apps in 30s instead of the full suite |
 | [examples/vite](examples/vite) | TS monorepo | per-package typechecks selected by path, build → tests dependency, vitest |
 | [cmd/dev](cmd/dev) | lap itself | `mise run dev` |

@@ -33,22 +33,22 @@ Adding an unused `import os,sys` and a badly formatted function to
 dev · budget 1m0s · fix mode · 9 cpu · 1 changed files vs origin/main (merge-base a461af8ce4)
 plan: 4 to run, 0 deferred, 1 skipped (dev plan for details)
   ▸ black [default · 1 file · 1 cpu]
-  ✎ black 400ms fixed 1 file(s)
+  ✎ black 300ms fixed 1 file(s)
   ▸ isort [default · 1 file · 1 cpu]
   ✎ isort 100ms fixed 1 file(s)
-  ▸ flake8 [default · 1 file · 5 cpu]
-  ▸ tests [related · 4 cpu]
+  ▸ flake8 [default · 1 file · 1 cpu]
+  ▸ tests [related · 5 cpu]
   ✗ flake8 200ms 2 findings
-  ✓ tests 29.7s narrowed: broader variant did not fit
+  ✓ tests 28.8s narrowed: broader variant did not fit
 
 ── flake8 (findings, exit 1) ──
 django/contrib/auth/forms.py:2:1: F401 'os' imported but unused
 django/contrib/auth/forms.py:3:1: F401 'sys' imported but unused
 
-dev in 30.4s: 1 passed, 2 fixed, 1 findings
+dev in 29.4s: 1 passed, 2 fixed, 1 findings
 not verified locally: tests (narrowed to related)
+run 20261004T061926Z-29e9c6 · dev logs <task> · dev why
 ```
 
 black and isort ran one after the other (they touch the same file), flake8
 started only after both, and `auth_tests` ran instead of the full suite.
-(Since that run, per-file tasks get at most one CPU per file.)

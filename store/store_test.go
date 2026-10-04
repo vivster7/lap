@@ -400,10 +400,20 @@ func TestEstimate(t *testing.T) {
 	for i := 1; i <= 8; i++ {
 		record(t, r, att("lint", time.Duration(i)*time.Second, Passed))
 	}
-	// 10 samples: 1..8, 10, 20 -> p90 (nearest rank 9) = 10s -> 11s; lower bound 30s wins.
+	// 10 samples: 1..8, 10, 20 -> p90 (nearest rank 9) = 10s -> 11s. The
+	// timeout is older than these completions, so it no longer bounds the
+	// estimate (caches warm, code changes).
 	e = s.Estimate(q)
-	if e.Confidence != "ok" || e.Samples != 10 || e.Duration != 30*time.Second || !strings.Contains(e.Source, "p90 of 10 samples (+10%)") {
-		t.Fatalf("ok+censored: %+v", e)
+	if e.Confidence != "ok" || e.Samples != 10 || e.Duration != 11*time.Second || e.LowerBound != 0 || !strings.Contains(e.Source, "p90 of 10 samples (+10%)") {
+		t.Fatalf("ok, superseded timeout: %+v", e)
+	}
+	// A timeout newer than every completion raises the estimate again.
+	to2 := att("lint", 40*time.Second, TimedOut)
+	to2.Censored = true
+	record(t, r, to2)
+	e = s.Estimate(q)
+	if e.Duration != 40*time.Second || e.LowerBound != 40*time.Second {
+		t.Fatalf("ok+recent censored: %+v", e)
 	}
 
 	// Only censored samples.
