@@ -114,6 +114,11 @@ func tail(b []byte) []byte {
 // Q1 evidence: the EIO/hangup only happens once *every* slave fd is closed,
 // including the parent's copy. Without CloseChildEnds the master read blocks.
 func TestPTYHangupNeedsParentSlaveClosed(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		// Needs read deadlines on the master, which only the Linux
+		// non-blocking re-wrap provides (see SPIKE.md open issues).
+		t.Skip("Linux-specific evidence test")
+	}
 	master, slave, err := pty.Open()
 	if err != nil {
 		t.Fatal(err)
