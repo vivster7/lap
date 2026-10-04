@@ -188,6 +188,26 @@ func Vitest(args ...string) lap.Task {
 				CPU: lap.AllCPU, MinCPU: 1, Memory: 2 << 30,
 			},
 		},
+		Classify: classifyVitest,
+	}
+}
+
+func classifyVitest(c *lap.Classification) {
+	if c.ExitCode == 0 {
+		c.Outcome = store.Passed
+		return
+	}
+	c.Outcome = store.Findings
+	seen := map[string]bool{}
+	for _, l := range strings.Split(c.Plain(), "\n") {
+		t := strings.TrimSpace(l)
+		if rest, ok := strings.CutPrefix(t, "FAIL "); ok {
+			rest = strings.TrimSpace(rest)
+			if !seen[rest] {
+				seen[rest] = true
+				c.Findings = append(c.Findings, lap.Finding{Message: rest})
+			}
+		}
 	}
 }
 
@@ -209,5 +229,48 @@ func Biome() lap.Task {
 			},
 			Estimate: 3 * time.Second,
 		}},
+	}
+}
+
+// Oxfmt formats files with oxfmt (the oxc formatter; writer, --check in
+// check-only mode).
+func Oxfmt() lap.Task {
+	return lap.Task{
+		Name: "oxfmt", Groups: []string{"fmt"}, Phase: lap.Prepare,
+		Files:   append([]string{"*.json", "*.jsonc", "*.md", "*.css", "*.yml", "*.yaml", "*.html", "*.vue"}, jsFiles...),
+		Config:  []string{".oxfmtrc.json", ".oxfmtrc.jsonc", ".prettierignore"},
+		PerFile: true,
+		Variants: []lap.Variant{{
+			Name: "default",
+			Cmd: func(inv lap.Invocation) ([]string, error) {
+				argv := []string{bin(inv.Root, "oxfmt"), "--no-error-on-unmatched-pattern", fmt.Sprintf("--threads=%d", max(1, inv.Workers))}
+				if inv.Mode == lap.CheckOnly {
+					argv = append(argv, "--list-different")
+				}
+				return append(argv, files(inv, ".")...), nil
+			},
+			CPU: lap.AllCPU, MinCPU: 1,
+			Estimate: 3 * time.Second,
+		}},
+		Classify: func(c *lap.Classification) {
+			switch {
+			case c.ExitCode == 0 && c.Mode == lap.CheckOnly && strings.TrimSpace(c.Plain()) != "":
+				c.Outcome = store.Findings
+			case c.ExitCode == 0:
+				c.Outcome = store.Passed
+			case c.Mode == lap.CheckOnly && c.ExitCode == 1:
+				c.Outcome = store.Findings
+			default:
+				c.Outcome = store.ToolError
+			}
+			if c.Outcome == store.Findings {
+				for _, l := range strings.Split(strings.TrimSpace(c.Plain()), "\n") {
+					if l = strings.TrimSpace(l); l != "" && !strings.Contains(l, " ") {
+						c.Findings = append(c.Findings, lap.Finding{File: l, Message: "not formatted"})
+					}
+				}
+			}
+		},
+		Suggest: "run without --check to apply oxfmt",
 	}
 }

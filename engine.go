@@ -577,6 +577,13 @@ func (e *engine) options(n *node) []Option {
 	var out []Option
 	for i, v := range n.task.Variants {
 		min, max := v.cpuRange(e.cpu)
+		if n.task.PerFile && !n.inv.All && len(n.inv.Files) > 0 && max > len(n.inv.Files) {
+			// More workers than files is waste.
+			max = len(n.inv.Files)
+			if min > max {
+				min = max
+			}
+		}
 		est := e.store.Estimate(store.EstimateQuery{
 			Task: n.task.Name, Variant: v.name(), ScopeBucket: bucket, Machine: e.host, Workers: max,
 		})

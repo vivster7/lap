@@ -1,0 +1,15 @@
+# Copy into a Prometheus checkout (or merge with its tooling).
+[tools]
+go = "1.26.7"
+golangci-lint = "2.13.1"
+
+[tasks.setup]
+description = "Install tools, warm Go caches, build dev"
+run = [
+  "go mod download",
+  "go build ./... && go test -short -count=1 -run XXX ./... > /dev/null",
+  'GOBIN="$PWD/bin" go install github.com/vivster7/lap/examples/prometheus@latest && mv bin/prometheus bin/dev',
+]
+
+[tasks.dev]
+run = "bin/dev"

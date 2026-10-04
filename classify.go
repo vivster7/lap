@@ -91,7 +91,7 @@ func defaultClassify(c *Classification) {
 }
 
 // fileLineRE matches the common "path:line:col: message" diagnostic shape.
-var fileLineRE = regexp.MustCompile(`^([^\s:][^:]*\.[A-Za-z0-9]+):(\d+)(?::(\d+))?:?\s*(.*)$`)
+var fileLineRE = regexp.MustCompile(`^([^\s:]+\.[A-Za-z0-9]+):(\d+)(?::(\d+))?:?\s*(.*)$`)
 
 // ParseFileLine extracts "file:line[:col]: message" diagnostics from text.
 // Adapters can use it in Classify for tools without structured output.

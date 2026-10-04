@@ -8,7 +8,7 @@
 //
 // Usage, from a Prometheus checkout with the tools from mise.toml installed:
 //
-//	go run github.com/vivster7/lap/examples/prometheus [group|task ...]
+//	go run github.com/vivster7/lap/examples/prometheus@latest [group|task ...]
 package main
 
 import (

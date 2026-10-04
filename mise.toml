@@ -1,2 +1,6 @@
 [tools]
 go = "1.27"
+
+[tasks.dev]
+description = "Run lap's own bounded inner-loop checks"
+run = "go run ./cmd/dev"

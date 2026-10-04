@@ -1,0 +1,16 @@
+# Copy into a Django checkout.
+[tools]
+go = "1.27"
+uv = "latest"
+biome = "2.4.15"
+
+[tasks.setup]
+description = "Create .venv with Django (editable) and the pre-commit linters, build dev"
+run = [
+  "uv venv .venv",
+  "uv pip install --python .venv/bin/python -e . black==26.5.1 isort==8.0.1 flake8==7.3.0 tblib",
+  'GOBIN="$PWD/bin" go install github.com/vivster7/lap/examples/django@latest && mv bin/django bin/dev',
+]
+
+[tasks.dev]
+run = "bin/dev"

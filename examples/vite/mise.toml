@@ -1,0 +1,16 @@
+# Copy into a Vite checkout.
+[tools]
+go = "1.27"
+node = "26"
+pnpm = "12.6.0"
+
+[tasks.setup]
+description = "Install dependencies, build all packages once, build dev"
+run = [
+  "pnpm install --frozen-lockfile",
+  "pnpm build",
+  'GOBIN="$PWD/bin" go install github.com/vivster7/lap/examples/vite@latest && mv bin/vite bin/dev',
+]
+
+[tasks.dev]
+run = "bin/dev"

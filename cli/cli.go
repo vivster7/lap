@@ -421,7 +421,16 @@ func statsCmd(cfg lap.Config, args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 	fmt.Fprintf(stdout, "%-24s %-10s %5s %8s %8s  %s\n", "task", "variant", "runs", "p50", "p90", "outcomes")
+	dur := func(d time.Duration) string {
+		if d == 0 {
+			return "-"
+		}
+		return d.Round(100 * time.Millisecond).String()
+	}
 	for _, s := range stats {
+		if s.Counts[store.Skipped] == s.Attempts {
+			continue // never applicable so far
+		}
 		var parts []string
 		for _, o := range []store.Outcome{store.Passed, store.Fixed, store.Findings, store.ToolError, store.TimedOut, store.Deferred, store.Blocked, store.Stale} {
 			if c := s.Counts[o]; c > 0 {
@@ -429,7 +438,7 @@ func statsCmd(cfg lap.Config, args []string, stdout, stderr io.Writer) int {
 			}
 		}
 		fmt.Fprintf(stdout, "%-24s %-10s %5d %8s %8s  %s\n", s.Task, s.Variant, s.Attempts,
-			s.P50.Round(100*time.Millisecond), s.P90.Round(100*time.Millisecond), strings.Join(parts, ", "))
+			dur(s.P50), dur(s.P90), strings.Join(parts, ", "))
 	}
 	return 0
 }
